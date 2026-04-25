@@ -1,5 +1,5 @@
 """
-Modelo de dados para o módulo de calendário
+Modelo de dados para o módulo de calendário - Versão Melhorada
 """
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
@@ -18,6 +18,11 @@ class CalendarModel:
         """Carrega eventos do armazenamento"""
         dados = self.app.storage.carregar_calendario()
         self.eventos = dados.get("eventos", [])
+        
+        # Migrar eventos antigos para incluir categoria
+        for evento in self.eventos:
+            if "categoria" not in evento:
+                evento["categoria"] = "Pessoal"
     
     def salvar_dados(self):
         """Salva eventos no armazenamento"""
@@ -25,9 +30,10 @@ class CalendarModel:
         self.app.storage.salvar_calendario(dados)
     
     def adicionar_evento(self, titulo: str, data: str, hora: str = "", 
-                        descricao: str = "", cor: str = "#FF6B8A") -> str:
+                        descricao: str = "", cor: str = "#FF6B8A", 
+                        categoria: str = "Pessoal") -> str:
         """Adiciona um novo evento"""
-        from utils.helpers import gerar_id
+        from app.utils.helpers import gerar_id
         evento_id = gerar_id()
         
         evento = {
@@ -37,6 +43,7 @@ class CalendarModel:
             "hora": hora,
             "descricao": descricao,
             "cor": cor,
+            "categoria": categoria,
             "criado_em": datetime.now().isoformat()
         }
         self.eventos.append(evento)

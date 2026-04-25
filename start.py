@@ -1,7 +1,3 @@
-"""
-Script de inicialização do projeto.
-Executar `py start.py` a partir da raiz do repositório iniciará a aplicação.
-"""
 from pathlib import Path
 import sys
 

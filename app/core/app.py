@@ -76,7 +76,7 @@ class App:
     
     def _inicializar_modulos(self):
         """Inicializa todos os modulos da aplicacao"""
-        from app.modules.calendar.controller import CalendarController
+        from app.modules.calendar.controller.controller import CalendarController
         from app.modules.notes.controller import NotesController
         from app.modules.daily.controller import DailyController
         from app.modules.finance.controller import FinanceController

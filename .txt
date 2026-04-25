@@ -1,7 +1,7 @@
 MeuCantinho/
-├── start.py                 # Ponto de entrada principal
+├── start.py
 ├── app/
-│   ├── main.py             # Inicializador da aplicação
+│   ├── main.py
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── app.py
@@ -48,7 +48,7 @@ MeuCantinho/
 │   └── utils/
 │       ├── __init__.py
 │       └── helpers.py
-└── data/                   # Criado automaticamente
+└── data/
     ├── config.json
     ├── notas.json
     ├── diario.json

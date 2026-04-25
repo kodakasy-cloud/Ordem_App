@@ -10,6 +10,8 @@ import unicodedata
 
 # ============== FORMATADORES ==============
 
+
+
 def formatar_data(data: datetime, formato: str = "%d/%m/%Y") -> str:
     """
     Formata uma data para string
