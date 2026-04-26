@@ -1,80 +1,41 @@
+"""
+Arquivo principal do aplicativo
+Inicializa e gerencia o ciclo de vida do app
+"""
+
 import sys
 import os
 from pathlib import Path
 
-# Nota: configuração de encoding é feita de forma segura em `app.__init__`
-# para evitar problemas com buffers fechados no ambiente do VS Code.
+# Adiciona o diretório base ao path
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR))
 
-# Configurar caminhos
-ROOT_DIR = Path(__file__).parent.parent
-sys.path.insert(0, str(ROOT_DIR))
-
-# Importar CustomTkinter
-try:
-    import customtkinter as ctk
-except ImportError:
-    print("CustomTkinter nao encontrado. Instale com: pip install customtkinter")
-    sys.exit(1)
-
-from app.core.app import App
+from app.core.app import Application
+from app.core.router import Router
+from app.ui.screens.loading_screen import LoadingScreen
+from app.services.storage import StorageService
 
 
-def verificar_dependencias():
-    """Verifica se todas as dependencias estao instaladas"""
-    dependencias = {
-        'customtkinter': 'customtkinter',
-    }
-    
-    faltando = []
-    for nome, pacote in dependencias.items():
-        try:
-            __import__(pacote)
-        except ImportError:
-            faltando.append(nome)
-    
-    if faltando:
-        print(f"Dependencias faltando: {', '.join(faltando)}")
-        print("Instale com: pip install " + " ".join(faltando))
-        return False
-    
-    return True
-
-
-def configurar_ambiente():
-    """Configura o ambiente da aplicacao"""
-    # Criar diretorio de dados
-    data_dir = ROOT_DIR / "data"
-    data_dir.mkdir(exist_ok=True)
-    
-    # Configurar CustomTkinter
-    ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("blue")
-    
-    return True
-
-
-def iniciar_aplicacao():
-    """Funcao principal que inicia a aplicacao"""
-    print("Verificando dependencias...")
-    if not verificar_dependencias():
-        return
-    
-    print("Configurando ambiente...")
-    if not configurar_ambiente():
-        return
-    
-    print("Inicializando aplicacao...")
+def main():
+    """Função principal do aplicativo"""
     try:
-        # Criar e executar app
-        root = ctk.CTk()
-        app = App(root)
+        # Inicializa serviços
+        storage_service = StorageService(BASE_DIR / "data")
+        
+        # Cria o router
+        router = Router()
+        
+        # Cria e executa a aplicação
+        app = Application(storage_service, router)
         app.run()
+        
     except Exception as e:
-        print(f"Erro durante execucao: {e}")
+        print(f"Erro ao iniciar aplicação: {e}")
         import traceback
         traceback.print_exc()
+        sys.exit(1)
 
 
-# Se executado diretamente (para testes)
 if __name__ == "__main__":
-    iniciar_aplicacao()
+    main()

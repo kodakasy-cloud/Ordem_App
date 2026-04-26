@@ -1,105 +1,115 @@
 """
-Roteador - Gerencia navegação entre telas
+Sistema de roteamento entre módulos
+Gerencia a navegação e comunicação entre os diferentes módulos
 """
-from typing import Optional
-import customtkinter as ctk
+
+from typing import Dict, Any, Optional
+from pathlib import Path
 
 
 class Router:
-    """Gerencia a navegação entre diferentes telas da aplicação"""
+    """Gerencia a navegação entre módulos"""
     
-    def __init__(self, app):
-        self.app = app
-        self.screens = {}
-        self.current_screen = None
-        self.main_container = None
-        self.history = []  # Histórico de navegação
-        
-        # Configurar container principal
-        self._setup_container()
-        
-        # Registrar telas
-        self._register_screens()
+    def __init__(self):
+        self.modules: Dict[str, Dict[str, Any]] = {}
+        self.current_module: Optional[str] = None
+        self.history: list = []
     
-    def _setup_container(self):
-        """Configura o container principal para as telas"""
-        # Criar frame principal que ocupará toda a janela
-        self.main_container = ctk.CTkFrame(self.app.root, fg_color="transparent")
-        self.main_container.pack(fill="both", expand=True)
-    
-    def _register_screens(self):
-        """Registra todas as telas disponíveis"""
-        from app.ui.screens.main_screen import MainScreen
-        from app.ui.screens.loading_screen import LoadingScreen
-        
-        self.screens = {
-            'main': MainScreen,
-            'loading': LoadingScreen
-        }
-    
-    def navegar(self, screen_name: str, **kwargs):
+    def register_module(self, module_id: str, module_info: Dict[str, Any]):
         """
-        Navega para uma tela específica
+        Registra um módulo no router
         
         Args:
-            screen_name: Nome da tela ('main', 'loading', etc)
-            **kwargs: Argumentos adicionais para a tela
+            module_id: Identificador único do módulo
+            module_info: Dicionário com informações do módulo
         """
-        if screen_name not in self.screens:
-            print(f"⚠️ Tela '{screen_name}' não encontrada")
-            return
+        if module_id in self.modules:
+            raise ValueError(f"Módulo '{module_id}' já está registrado")
         
-        # Salvar no histórico (evitar duplicatas consecutivas)
-        if not self.history or self.history[-1] != screen_name:
-            self.history.append(screen_name)
-        
-        # Limitar tamanho do histórico
-        if len(self.history) > 10:
-            self.history.pop(0)
-        
-        # Limpar tela atual
-        if self.current_screen:
-            try:
-                self.current_screen.destroy()
-            except:
-                pass
-        
-        # Criar nova tela
-        screen_class = self.screens[screen_name]
-        self.current_screen = screen_class(self.app, **kwargs)
-        
-        # Exibir tela no container
-        self.current_screen.pack(fill="both", expand=True)
-        
-        # Atualizar título da janela se necessário
-        self._atualizar_titulo(screen_name)
+        self.modules[module_id] = module_info
     
-    def _atualizar_titulo(self, screen_name: str):
-        """Atualiza o título da janela baseado na tela"""
-        titulos = {
-            'main': "🌸 Meu Cantinho",
-            'loading': "🔄 Carregando..."
+    def unregister_module(self, module_id: str):
+        """Remove um módulo do router"""
+        if module_id in self.modules:
+            del self.modules[module_id]
+    
+    def get_module(self, module_id: str) -> Optional[Dict[str, Any]]:
+        """Retorna as informações de um módulo"""
+        return self.modules.get(module_id)
+    
+    def get_module_controller(self, module_id: str) -> Optional[Any]:
+        """Retorna o controlador de um módulo"""
+        module = self.get_module(module_id)
+        if module:
+            return module.get("controller")
+        return None
+    
+    def get_module_info(self, module_id: str) -> Dict[str, Any]:
+        """Retorna informações básicas do módulo"""
+        module = self.get_module(module_id)
+        if module:
+            return {
+                "name": module.get("name", module_id),
+                "icon": module.get("icon", "📦"),
+                "color": module.get("color", "#95a5a6")
+            }
+        return {
+            "name": module_id,
+            "icon": "❓",
+            "color": "#95a5a6"
         }
-        titulo = titulos.get(screen_name, "🌸 Meu Cantinho")
-        self.app.root.title(titulo)
     
-    def voltar(self):
-        """Volta para a tela anterior"""
-        if len(self.history) >= 2:
-            # Remove tela atual
-            self.history.pop()
-            # Volta para a anterior
-            tela_anterior = self.history[-1]
-            self.navegar(tela_anterior)
-        else:
-            print("⚠️ Não há tela anterior no histórico")
+    def get_all_modules(self) -> Dict[str, Dict[str, Any]]:
+        """Retorna todos os módulos registrados"""
+        return self.modules.copy()
     
-    def limpar_historico(self):
+    def navigate_to(self, module_id: str) -> bool:
+        """
+        Navega para um módulo específico
+        
+        Args:
+            module_id: ID do módulo de destino
+            
+        Returns:
+            bool: True se navegação foi bem sucedida
+        """
+        if module_id not in self.modules:
+            return False
+        
+        # Adiciona ao histórico
+        if self.current_module:
+            self.history.append(self.current_module)
+        
+        self.current_module = module_id
+        return True
+    
+    def go_back(self) -> Optional[str]:
+        """Volta para o módulo anterior no histórico"""
+        if self.history:
+            self.current_module = self.history.pop()
+            return self.current_module
+        return None
+    
+    def get_current_module(self) -> Optional[str]:
+        """Retorna o módulo atual"""
+        return self.current_module
+    
+    def clear_history(self):
         """Limpa o histórico de navegação"""
-        self.history = []
+        self.history.clear()
     
-    def recarregar_tela_atual(self):
-        """Recarrega a tela atual"""
-        if self.current_screen:
-            screen_name = self.history[-1] if self.history else 'main'
-            self.navegar(screen_name)
+    def module_exists(self, module_id: str) -> bool:
+        """Verifica se um módulo existe"""
+        return module_id in self.modules
+    
+    def get_modules_list(self) -> list:
+        """Retorna lista de módulos disponíveis"""
+        return [
+            {
+                "id": module_id,
+                "name": info.get("name", module_id),
+                "icon": info.get("icon", "📦"),
+                "color": info.get("color", "#95a5a6")
+            }
+            for module_id, info in self.modules.items()
+        ]

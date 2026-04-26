@@ -1,158 +1,174 @@
 """
-Nucleo da aplicacao - Gerencia o ciclo de vida
+Classe principal do aplicativo
+Gerencia a janela principal e o ciclo de vida
 """
-import customtkinter as ctk
+
+import tkinter as tk
+from tkinter import ttk, messagebox
 from pathlib import Path
-import json
-from datetime import datetime
+from typing import Optional
 
 from app.core.router import Router
 from app.services.storage import StorageService
+from app.ui.screens.main_screen import MainScreen
+from app.ui.screens.loading_screen import LoadingScreen
 
 
-class App:
-    """Classe principal da aplicacao"""
+class Application:
+    """Classe principal do aplicativo"""
     
-    def __init__(self, root):
-        """
-        Inicializa a aplicacao
+    def __init__(self, storage_service: StorageService, router: Router):
+        self.storage_service = storage_service
+        self.router = router
+        self.root: Optional[tk.Tk] = None
+        self.current_screen: Optional[ttk.Frame] = None
         
-        Args:
-            root: Janela root do CustomTkinter
-        """
-        self.root = root
-        self.root.title("Meu Cantinho")
+    def run(self):
+        """Inicia o aplicativo"""
+        # Cria a janela principal
+        self.root = tk.Tk()
+        self.root.title("MeuCantinho - Seu Espaço Pessoal")
+        self.root.geometry("1280x720")
+        self.root.minsize(1024, 600)
         
-        # Configurar tamanho da janela
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        self.window_width = 1200
-        self.window_height = 750
+        # Configura o estilo
+        self.setup_styles()
         
-        # Centralizar janela
-        x = (screen_width - self.window_width) // 2
-        y = (screen_height - self.window_height) // 2
-        self.root.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
+        # Mostra tela de loading
+        self.show_loading_screen()
         
-        # Configurar minimo da janela
-        self.root.minsize(900, 600)
+        # Carrega dados em background
+        self.root.after(100, self.initialize_app)
         
-        # Icone da janela (se tiver)
-        icon_path = Path(__file__).parent.parent / "assets" / "icon.ico"
-        if icon_path.exists():
-            try:
-                self.root.iconbitmap(str(icon_path))
-            except:
-                pass
-        
-        # Inicializar servicos
-        self.storage = StorageService()
-        
-        # Carregar configuracoes
-        self.config = self.storage.carregar_config()
-        
-        # Aplicar tema salvo
-        tema = self.config.get("tema", "dark")
-        ctk.set_appearance_mode(tema)
-        
-        # Inicializar roteador
-        self.router = Router(self)
-        
-        # Controladores dos modulos
-        self.modules = {}
-        
-        # Estado da aplicacao
-        self.running = True
-        self.atualizacao_ativa = True
-        
-        # Configurar evento de fechamento
-        self.root.protocol("WM_DELETE_WINDOW", self.fechar)
-        
-        # Inicializar modulos
-        self._inicializar_modulos()
-        
-        # Carregar tela principal
-        self.router.navegar("main")
+        # Inicia o loop principal
+        self.root.mainloop()
     
-    def _inicializar_modulos(self):
-        """Inicializa todos os modulos da aplicacao"""
-        from app.modules.calendar.controller.controller import CalendarController
+    def setup_styles(self):
+        """Configura os estilos do ttk"""
+        style = ttk.Style()
+        
+        # Cores principais
+        style.configure("Title.TLabel", font=("Segoe UI", 24, "bold"))
+        style.configure("Heading.TLabel", font=("Segoe UI", 14, "bold"))
+        style.configure("Normal.TLabel", font=("Segoe UI", 10))
+        
+        # Configuração do sidebar
+        style.configure("Sidebar.TFrame", background="#2c3e50")
+        style.configure("Sidebar.TButton", 
+                       font=("Segoe UI", 11),
+                       padding=10,
+                       background="#34495e")
+        
+        # Cores para diferentes módulos
+        self.colors = {
+            "calendar": "#3498db",
+            "notes": "#2ecc71",
+            "daily": "#e74c3c",
+            "finance": "#f39c12",
+            "setting": "#9b59b6"
+        }
+    
+    def show_loading_screen(self):
+        """Exibe a tela de carregamento"""
+        if self.current_screen:
+            self.current_screen.destroy()
+        
+        self.current_screen = LoadingScreen(self.root, self.colors)
+        self.current_screen.pack(fill=tk.BOTH, expand=True)
+    
+    def initialize_app(self):
+        """Inicializa o aplicativo carregando os dados"""
+        try:
+            # Carrega configurações
+            self.config = self.storage_service.load_config()
+            
+            # Registra os módulos no router
+            self.register_modules()
+            
+            # Carrega o módulo ativo
+            active_module = self.config.get("active_module", "calendar")
+            
+            # Mostra a tela principal
+            self.show_main_screen(active_module)
+            
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao inicializar aplicativo: {e}")
+            self.root.quit()
+    
+    def register_modules(self):
+        """Registra todos os módulos disponíveis no router"""
+        # Importa os controladores dos módulos
+        from app.modules.calendar.controller.calendar_controller import CalendarController
         from app.modules.notes.controller import NotesController
         from app.modules.daily.controller import DailyController
         from app.modules.finance.controller import FinanceController
         from app.modules.setting.controller import SettingController
         
-        self.modules = {
-            'calendar': CalendarController(self),
-            'notes': NotesController(self),
-            'daily': DailyController(self),
-            'finance': FinanceController(self),
-            'setting': SettingController(self)
-        }
+        # Registra cada módulo com seu controlador
+        self.router.register_module("calendar", {
+            "name": "Calendário",
+            "icon": "📅",
+            "color": self.colors["calendar"],
+            "controller": CalendarController(self.storage_service)
+        })
+        
+        self.router.register_module("notes", {
+            "name": "Notas",
+            "icon": "📝",
+            "color": self.colors["notes"],
+            "controller": NotesController(self.storage_service)
+        })
+        
+        self.router.register_module("daily", {
+            "name": "Diário",
+            "icon": "📖",
+            "color": self.colors["daily"],
+            "controller": DailyController(self.storage_service)
+        })
+        
+        self.router.register_module("finance", {
+            "name": "Finanças",
+            "icon": "💰",
+            "color": self.colors["finance"],
+            "controller": FinanceController(self.storage_service)
+        })
+        
+        self.router.register_module("setting", {
+            "name": "Configurações",
+            "icon": "⚙️",
+            "color": self.colors["setting"],
+            "controller": SettingController(self.storage_service)
+        })
     
-    def get_module(self, name):
-        """Retorna um modulo pelo nome"""
-        return self.modules.get(name)
+    def show_main_screen(self, active_module: str):
+        """Exibe a tela principal do aplicativo"""
+        if self.current_screen:
+            self.current_screen.destroy()
+        
+        # Cria e exibe a tela principal
+        self.current_screen = MainScreen(
+            self.root,
+            self.router,
+            self.storage_service,
+            active_module,
+            self.colors
+        )
+        self.current_screen.pack(fill=tk.BOTH, expand=True)
+        
+        # Atualiza o título da janela
+        module_name = self.router.get_module_info(active_module)["name"]
+        self.root.title(f"MeuCantinho - {module_name}")
     
-    def run(self):
-        """Inicia o loop principal da aplicacao"""
+    def shutdown(self):
+        """Finaliza o aplicativo"""
         try:
-            print("Aplicacao iniciada com sucesso!")
-            self.root.mainloop()
+            # Salva configurações
+            if hasattr(self, 'config'):
+                self.storage_service.save_config(self.config)
+            
+            # Fecha a janela
+            if self.root:
+                self.root.quit()
+                
         except Exception as e:
-            print(f"Erro no loop principal: {e}")
-    
-    def fechar(self):
-        """Fecha a aplicacao de forma segura"""
-        print("Salvando dados e encerrando...")
-        self.running = False
-        self.atualizacao_ativa = False
-        
-        # Salvar dados de todos os modulos
-        for module in self.modules.values():
-            try:
-                if hasattr(module, 'salvar_dados'):
-                    module.salvar_dados()
-            except Exception as e:
-                print(f"Erro ao salvar dados do modulo: {e}")
-        
-        # Salvar configuracoes
-        self.storage.salvar_config(self.config)
-        
-        # Fechar janelas secundarias
-        for module in self.modules.values():
-            try:
-                if hasattr(module, 'fechar'):
-                    module.fechar()
-            except Exception as e:
-                print(f"Erro ao fechar modulo: {e}")
-        
-        # Destruir janela principal
-        try:
-            self.root.destroy()
-        except:
-            pass
-        
-        print("Aplicacao encerrada com sucesso! Ate mais!")
-    
-    def atualizar_status(self, mensagem):
-        """Atualiza mensagem de status na interface"""
-        # Verifica se o router e a tela atual existem
-        if hasattr(self.router, 'current_screen') and self.router.current_screen:
-            # Verifica se a tela atual tem o metodo atualizar_status
-            if hasattr(self.router.current_screen, 'atualizar_status'):
-                self.router.current_screen.atualizar_status(mensagem)
-    
-    def alternar_tema(self):
-        """Alterna entre tema claro e escuro"""
-        novo_tema = "light" if ctk.get_appearance_mode() == "Dark" else "dark"
-        ctk.set_appearance_mode(novo_tema)
-        self.config["tema"] = novo_tema
-        self.storage.salvar_config(self.config)
-        
-        # Recarregar tela para aplicar novas cores
-        if hasattr(self.router, 'current_screen') and self.router.current_screen:
-            if hasattr(self.router.current_screen, 'atualizar_cores'):
-                self.router.current_screen.atualizar_cores(novo_tema)
-        
-        self.atualizar_status(f"Tema {novo_tema} ativado")
+            print(f"Erro ao finalizar aplicativo: {e}")

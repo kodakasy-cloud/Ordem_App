@@ -1,15 +1,4 @@
 {
-  "eventos": [
-    {
-      "categoria": "Saúde",
-      "cor": "#FFA726",
-      "criado_em": "2026-04-24T13:27:06.558751",
-      "data": "2026-04-25",
-      "descricao": "",
-      "hora": "",
-      "id": "f733e8ea",
-      "titulo": "csafaf"
-    }
-  ],
-  "ultima_atualizacao": "2026-04-24T14:27:56.074862"
+  "eventos": [],
+  "ultima_atualizacao": "2026-04-25T18:12:31.808813"
 }

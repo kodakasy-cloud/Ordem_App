@@ -1,8 +1,5 @@
-"""
-Módulo de Anotações
-"""
-from app.modules.notes.controller import NotesController
-from app.modules.notes.model import NotesModel
-from app.modules.notes.view import NotesView
+from .controller import NotesController
+from .view import NotesView
+from .model import Note
 
-__all__ = ['NotesController', 'NotesModel', 'NotesView']
+__all__ = ['NotesController', 'NotesView', 'Note']

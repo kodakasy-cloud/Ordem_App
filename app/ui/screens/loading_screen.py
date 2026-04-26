@@ -1,99 +1,128 @@
 """
-Tela de loading - Splash screen
+Tela de carregamento do aplicativo
 """
-import customtkinter as ctk
+
+import tkinter as tk
+from tkinter import ttk
 
 
-class LoadingScreen(ctk.CTkFrame):
-    """Tela de carregamento inicial"""
+class LoadingScreen(ttk.Frame):
+    """Tela de carregamento com animação"""
     
-    def __init__(self, app, **kwargs):
-        super().__init__(app.root, fg_color="transparent")
-        self.app = app
+    def __init__(self, parent, colors: dict):
+        super().__init__(parent)
+        self.parent = parent
+        self.colors = colors
+        self.progress = 0
         
-        self._setup_ui()
-        self.carregar()
+        self.setup_ui()
+        self.animate_loading()
     
-    def _setup_ui(self):
-        """Configura a interface de loading"""
+    def setup_ui(self):
+        """Configura a interface da tela de loading"""
         # Frame central
-        center_frame = ctk.CTkFrame(self, fg_color="transparent")
-        center_frame.pack(expand=True)
-        
-        # Ícone animado
-        self.icon_label = ctk.CTkLabel(
-            center_frame,
-            text="🌸",
-            font=ctk.CTkFont(size=72)
-        )
-        self.icon_label.pack(pady=20)
+        center_frame = ttk.Frame(self)
+        center_frame.place(relx=0.5, rely=0.5, anchor="center")
         
         # Título
-        titulo = ctk.CTkLabel(
+        title_label = ttk.Label(
             center_frame,
-            text="Meu Cantinho",
-            font=ctk.CTkFont(size=28, weight="bold"),
-            text_color="#FF6B8A"
+            text="MeuCantinho",
+            font=("Segoe UI", 36, "bold"),
+            foreground="#2c3e50"
         )
-        titulo.pack(pady=10)
+        title_label.pack(pady=(0, 10))
         
         # Subtítulo
-        subtitulo = ctk.CTkLabel(
+        subtitle_label = ttk.Label(
             center_frame,
-            text="Seu espaço pessoal de organização",
-            font=ctk.CTkFont(size=14),
-            text_color="#808080"
+            text="Seu Espaço Pessoal",
+            font=("Segoe UI", 14),
+            foreground="#7f8c8d"
         )
-        subtitulo.pack(pady=(0, 20))
+        subtitle_label.pack(pady=(0, 30))
         
-        # Progress bar
-        self.progress = ctk.CTkProgressBar(center_frame, width=300, height=10, corner_radius=5)
-        self.progress.pack(pady=20)
-        self.progress.set(0)
-        
-        # Status
-        self.status_label = ctk.CTkLabel(
+        # Progressbar
+        self.progress_bar = ttk.Progressbar(
             center_frame,
-            text="Iniciando...",
-            font=ctk.CTkFont(size=12),
-            text_color="#999999"
+            mode="determinate",
+            length=400,
+            style="Loading.Horizontal.TProgressbar"
+        )
+        self.progress_bar.pack(pady=20)
+        
+        # Label de status
+        self.status_label = ttk.Label(
+            center_frame,
+            text="Inicializando...",
+            font=("Segoe UI", 10),
+            foreground="#95a5a6"
         )
         self.status_label.pack()
         
-        # Animar ícone
-        self._animar_icone()
-    
-    def _animar_icone(self, passo=0):
-        """Anima o ícone durante o loading"""
-        if self.winfo_exists():
-            icones = ["🌸", "🌺", "🌸", "🌷"]
-            self.icon_label.configure(text=icones[passo % len(icones)])
-            self.after(500, lambda: self._animar_icone(passo + 1))
-    
-    def carregar(self, progresso=0):
-        """Simula carregamento com diferentes etapas"""
-        etapas = [
-            (0.2, "Carregando módulos..."),
-            (0.4, "Configurando interface..."),
-            (0.6, "Preparando dados..."),
-            (0.8, "Quase lá..."),
-            (1.0, "Concluído!")
+        # Frame de módulos (animação dos ícones)
+        modules_frame = ttk.Frame(center_frame)
+        modules_frame.pack(pady=30)
+        
+        modules = [
+            ("📅", "Calendário", self.colors["calendar"]),
+            ("📝", "Notas", self.colors["notes"]),
+            ("📖", "Diário", self.colors["daily"]),
+            ("💰", "Finanças", self.colors["finance"]),
+            ("⚙️", "Configurações", self.colors["setting"])
         ]
         
-        if progresso <= 1:
-            self.progress.set(progresso)
+        self.module_labels = []
+        for icon, name, color in modules:
+            module_frame = ttk.Frame(modules_frame)
+            module_frame.pack(side=tk.LEFT, padx=15)
             
-            # Atualizar status baseado no progresso
-            for p, texto in etapas:
-                if progresso <= p:
-                    self.status_label.configure(text=texto)
-                    break
+            icon_label = ttk.Label(
+                module_frame,
+                text=icon,
+                font=("Segoe UI", 24)
+            )
+            icon_label.pack()
             
-            self.after(20, lambda: self.carregar(progresso + 0.02))
-        else:
-            # Carregamento completo, ir para tela principal
-            self.after(500, lambda: self.app.router.navegar("main"))
+            name_label = ttk.Label(
+                module_frame,
+                text=name,
+                font=("Segoe UI", 10),
+                foreground=color
+            )
+            name_label.pack()
+            
+            self.module_labels.append((icon_label, name))
     
-    def destroy(self):
-        """Destroi a tela"""
-        super().destroy()
+    def animate_loading(self):
+        """Anima a barra de progresso e atualiza o status"""
+        self.progress += 2
+        
+        if self.progress <= 100:
+            self.progress_bar["value"] = self.progress
+            
+            # Atualiza status baseado no progresso
+            if self.progress < 20:
+                status = "Carregando módulos..."
+            elif self.progress < 40:
+                status = "Inicializando banco de dados..."
+            elif self.progress < 60:
+                status = "Verificando configurações..."
+            elif self.progress < 80:
+                status = "Preparando interface..."
+            else:
+                status = "Quase lá..."
+            
+            self.status_label.config(text=status)
+            
+            # Anima ícones dos módulos
+            for idx, (label, name) in enumerate(self.module_labels):
+                if self.progress > (idx + 1) * 20:
+                    label.config(text=["📅", "📝", "📖", "💰", "⚙️"][idx])
+            
+            # Continua animação
+            self.after(30, self.animate_loading)
+        else:
+            # Loading completo
+            self.status_label.config(text="Pronto!")
+            self.progress_bar["value"] = 100

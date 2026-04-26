@@ -1,7 +1,8 @@
 """
-Core module - Gerencia o núcleo da aplicação
+Core module - Funcionalidades centrais do aplicativo
 """
-from app.core.app import App
-from app.core.router import Router
 
-__all__ = ['App', 'Router']
+from .app import Application
+from .router import Router
+
+__all__ = ['Application', 'Router']

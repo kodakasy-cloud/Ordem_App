@@ -1,246 +1,136 @@
 """
-Serviço de armazenamento de dados - Gerencia persistência
+Serviço de armazenamento de dados
+Gerencia a persistência dos dados JSON
 """
+
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional, List
 from datetime import datetime
 
 
 class StorageService:
-    """
-    Gerencia persistência de dados em arquivos JSON
-    Centraliza todas as operações de leitura/escrita
-    """
+    """Serviço para gerenciar o armazenamento de dados"""
     
-    def __init__(self, data_dir: str = "data"):
-        """
-        Inicializa o serviço de armazenamento
-        
-        Args:
-            data_dir: Diretório onde os dados serão salvos
-        """
-        self.data_dir = Path(data_dir)
+    def __init__(self, data_dir: Path):
+        self.data_dir = data_dir
         self.data_dir.mkdir(exist_ok=True)
         
         # Arquivos de dados
-        self.config_file = self.data_dir / "config.json"
-        self.notas_file = self.data_dir / "notas.json"
-        self.diario_file = self.data_dir / "diario.json"
-        self.financas_file = self.data_dir / "financas.json"
-        self.calendario_file = self.data_dir / "calendario.json"
-        
-        # Criar arquivos padrão se não existirem
-        self._criar_arquivos_padrao()
-    
-    def _criar_arquivos_padrao(self):
-        """Cria arquivos padrão com estrutura básica se não existirem"""
-        arquivos_padrao = {
-            self.config_file: {"tema": "dark", "primeira_vez": True, "versao": "1.0.0"},
-            self.notas_file: {"notas": {}, "ultima_atualizacao": datetime.now().isoformat()},
-            self.diario_file: {"entradas": {}, "ultima_atualizacao": datetime.now().isoformat()},
-            self.financas_file: {"transacoes": [], "categorias": [], "ultima_atualizacao": datetime.now().isoformat()},
-            self.calendario_file: {"eventos": [], "ultima_atualizacao": datetime.now().isoformat()}
+        self.files = {
+            "config": self.data_dir / "config.json",
+            "calendar": self.data_dir / "calendario.json",
+            "notes": self.data_dir / "notas.json",
+            "daily": self.data_dir / "diario.json",
+            "finance": self.data_dir / "financas.json"
         }
         
-        for arquivo, dados_padrao in arquivos_padrao.items():
-            if not arquivo.exists():
-                try:
-                    with open(arquivo, 'w', encoding='utf-8') as f:
-                        json.dump(dados_padrao, f, ensure_ascii=False, indent=2)
-                except Exception as e:
-                    print(f"Erro ao criar arquivo padrão {arquivo}: {e}")
+        # Inicializa arquivos se não existirem
+        self.initialize_files()
     
-    # Métodos genéricos
-    def carregar_arquivo(self, file_path: Path) -> Dict:
-        """
-        Carrega dados de um arquivo JSON
+    def initialize_files(self):
+        """Inicializa os arquivos de dados com estruturas padrão"""
+        default_data = {
+            "config": {
+                "active_module": "calendar",
+                "theme": "light",
+                "last_accessed": datetime.now().isoformat()
+            },
+            "calendar": {"events": []},
+            "notes": {"notes": [], "categories": []},
+            "daily": {"entries": []},
+            "finance": {
+                "transactions": [],
+                "categories": ["Alimentação", "Transporte", "Lazer", "Saúde", "Educação"]
+            }
+        }
         
-        Args:
-            file_path: Caminho do arquivo
-        
-        Returns:
-            Dicionário com os dados carregados
-        """
-        if file_path.exists():
-            try:
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except json.JSONDecodeError:
-                print(f"Erro de decodificação JSON no arquivo {file_path}")
-                return {}
-            except Exception as e:
-                print(f"Erro ao carregar {file_path}: {e}")
-                return {}
-        return {}
+        for file_key, file_path in self.files.items():
+            if not file_path.exists():
+                self._save_json(file_path, default_data.get(file_key, {}))
     
-    def salvar_arquivo(self, file_path: Path, dados: Dict) -> bool:
-        """
-        Salva dados em um arquivo JSON
-        
-        Args:
-            file_path: Caminho do arquivo
-            dados: Dados a serem salvos
-        
-        Returns:
-            True se salvou com sucesso, False caso contrário
-        """
+    def _load_json(self, file_path: Path) -> Dict[str, Any]:
+        """Carrega dados de um arquivo JSON"""
         try:
-            # Adicionar timestamp de atualização
-            if isinstance(dados, dict):
-                dados["ultima_atualizacao"] = datetime.now().isoformat()
-            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+    
+    def _save_json(self, file_path: Path, data: Dict[str, Any]) -> bool:
+        """Salva dados em um arquivo JSON"""
+        try:
             with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(dados, f, ensure_ascii=False, indent=2, sort_keys=True)
+                json.dump(data, f, ensure_ascii=False, indent=2)
             return True
         except Exception as e:
             print(f"Erro ao salvar {file_path}: {e}")
             return False
     
-    # Métodos específicos para configurações
-    def carregar_config(self) -> Dict:
-        """
-        Carrega configurações salvas
-        
-        Returns:
-            Dicionário com as configurações
-        """
-        return self.carregar_arquivo(self.config_file)
+    # Métodos específicos para cada módulo
     
-    def salvar_config(self, config: Dict) -> bool:
-        """
-        Salva configurações
-        
-        Args:
-            config: Configurações a serem salvas
-        
-        Returns:
-            True se salvou com sucesso
-        """
-        return self.salvar_arquivo(self.config_file, config)
+    def load_config(self) -> Dict[str, Any]:
+        """Carrega configurações do aplicativo"""
+        config = self._load_json(self.files["config"])
+        if not config:
+            config = {
+                "active_module": "calendar",
+                "theme": "light"
+            }
+        return config
     
-    # Métodos específicos para notas
-    def carregar_notas(self) -> Dict:
-        """Carrega notas salvas"""
-        dados = self.carregar_arquivo(self.notas_file)
-        return dados.get("notas", {})
+    def save_config(self, config: Dict[str, Any]) -> bool:
+        """Salva configurações do aplicativo"""
+        return self._save_json(self.files["config"], config)
     
-    def salvar_notas(self, notas: Dict) -> bool:
-        """Salva notas"""
-        dados = {"notas": notas}
-        return self.salvar_arquivo(self.notas_file, dados)
-    
-    def adicionar_nota(self, nota: Dict) -> bool:
-        """Adiciona uma nova nota"""
-        notas = self.carregar_notas()
-        nota_id = nota.get("id", str(len(notas) + 1))
-        notas[nota_id] = nota
-        return self.salvar_notas(notas)
-    
-    # Métodos específicos para diário
-    def carregar_diario(self) -> Dict:
-        """Carrega entradas do diário"""
-        dados = self.carregar_arquivo(self.diario_file)
-        return dados.get("entradas", {})
-    
-    def salvar_diario(self, entradas: Dict) -> bool:
-        """Salva entradas do diário"""
-        dados = {"entradas": entradas}
-        return self.salvar_arquivo(self.diario_file, dados)
-    
-    def adicionar_entrada_diario(self, data: str, entrada: Dict) -> bool:
-        """Adiciona uma entrada no diário"""
-        entradas = self.carregar_diario()
-        entradas[data] = entrada
-        return self.salvar_diario(entradas)
-    
-    # Métodos específicos para finanças
-    def carregar_financas(self) -> Dict:
-        """Carrega dados financeiros"""
-        return self.carregar_arquivo(self.financas_file)
-    
-    def salvar_financas(self, dados: Dict) -> bool:
-        """Salva dados financeiros"""
-        return self.salvar_arquivo(self.financas_file, dados)
-    
-    def adicionar_transacao(self, transacao: Dict) -> bool:
-        """Adiciona uma transação financeira"""
-        dados = self.carregar_financas()
-        if "transacoes" not in dados:
-            dados["transacoes"] = []
-        dados["transacoes"].append(transacao)
-        return self.salvar_financas(dados)
-    
-    # Métodos específicos para calendário
-    def carregar_calendario(self) -> Dict:
+    def load_calendar_events(self) -> List[Dict[str, Any]]:
         """Carrega eventos do calendário"""
-        return self.carregar_arquivo(self.calendario_file)
+        data = self._load_json(self.files["calendar"])
+        return data.get("events", [])
     
-    def salvar_calendario(self, dados: Dict) -> bool:
+    def save_calendar_events(self, events: List[Dict[str, Any]]) -> bool:
         """Salva eventos do calendário"""
-        return self.salvar_arquivo(self.calendario_file, dados)
+        return self._save_json(self.files["calendar"], {"events": events})
     
-    def adicionar_evento(self, evento: Dict) -> bool:
-        """Adiciona um evento no calendário"""
-        dados = self.carregar_calendario()
-        if "eventos" not in dados:
-            dados["eventos"] = []
-        dados["eventos"].append(evento)
-        return self.salvar_calendario(dados)
+    def load_notes(self) -> Dict[str, Any]:
+        """Carrega notas"""
+        return self._load_json(self.files["notes"])
     
-    # Métodos utilitários
-    def backup(self, nome_backup: str = None) -> bool:
-        """
-        Cria um backup dos dados
-        
-        Args:
-            nome_backup: Nome do backup (opcional)
-        
-        Returns:
-            True se o backup foi criado com sucesso
-        """
-        try:
-            backup_dir = self.data_dir / "backups"
-            backup_dir.mkdir(exist_ok=True)
-            
-            if not nome_backup:
-                nome_backup = datetime.now().strftime("%Y%m%d_%H%M%S")
-            
-            backup_path = backup_dir / nome_backup
-            backup_path.mkdir(exist_ok=True)
-            
-            # Copiar todos os arquivos JSON
-            import shutil
-            for arquivo in self.data_dir.glob("*.json"):
-                shutil.copy2(arquivo, backup_path / arquivo.name)
-            
-            print(f"✅ Backup criado em: {backup_path}")
-            return True
-        except Exception as e:
-            print(f"❌ Erro ao criar backup: {e}")
-            return False
+    def save_notes(self, notes_data: Dict[str, Any]) -> bool:
+        """Salva notas"""
+        return self._save_json(self.files["notes"], notes_data)
     
-    def limpar_dados(self, confirmar: bool = False) -> bool:
-        """
-        Limpa todos os dados (cuidado!)
+    def load_daily_entries(self) -> List[Dict[str, Any]]:
+        """Carrega entradas do diário"""
+        data = self._load_json(self.files["daily"])
+        return data.get("entries", [])
+    
+    def save_daily_entries(self, entries: List[Dict[str, Any]]) -> bool:
+        """Salva entradas do diário"""
+        return self._save_json(self.files["daily"], {"entries": entries})
+    
+    def load_finance_data(self) -> Dict[str, Any]:
+        """Carrega dados financeiros"""
+        return self._load_json(self.files["finance"])
+    
+    def save_finance_data(self, finance_data: Dict[str, Any]) -> bool:
+        """Salva dados financeiros"""
+        return self._save_json(self.files["finance"], finance_data)
+    
+    def backup(self) -> Path:
+        """Cria um backup dos dados"""
+        backup_dir = self.data_dir / "backups"
+        backup_dir.mkdir(exist_ok=True)
         
-        Args:
-            confirmar: Deve ser True para confirmar a limpeza
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = backup_dir / f"backup_{timestamp}"
+        backup_path.mkdir()
         
-        Returns:
-            True se limpou com sucesso
-        """
-        if not confirmar:
-            print("⚠️ Limpeza não confirmada. Use confirmar=True para prosseguir.")
-            return False
+        for file_path in self.files.values():
+            if file_path.exists():
+                backup_file = backup_path / file_path.name
+                with open(file_path, 'r', encoding='utf-8') as src:
+                    with open(backup_file, 'w', encoding='utf-8') as dst:
+                        dst.write(src.read())
         
-        try:
-            for arquivo in self.data_dir.glob("*.json"):
-                if arquivo != self.config_file:  # Manter configurações
-                    arquivo.unlink()
-            self._criar_arquivos_padrao()
-            print("✅ Dados limpos com sucesso")
-            return True
-        except Exception as e:
-            print(f"❌ Erro ao limpar dados: {e}")
-            return False
+        return backup_path

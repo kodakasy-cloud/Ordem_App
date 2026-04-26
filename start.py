@@ -1,12 +1,10 @@
-from pathlib import Path
 import sys
+import os
 
-# Garantir que o diretório raiz esteja no sys.path
-ROOT_DIR = Path(__file__).parent
-sys.path.insert(0, str(ROOT_DIR))
+# Adiciona o diretório atual ao path para permitir imports relativos
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app import main
-
+from app.main import main
 
 if __name__ == "__main__":
-    main.iniciar_aplicacao()
+    main()

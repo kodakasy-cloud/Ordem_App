@@ -1,125 +1,155 @@
 """
-Componente de sidebar reutilizável para navegação
+Componente de barra lateral do aplicativo
 """
-import customtkinter as ctk
+
+import tkinter as tk
+from tkinter import ttk
+from typing import Callable, Optional
 
 
-class Sidebar(ctk.CTkFrame):
-    """
-    Sidebar com menu de navegação
-    Pode ser usado em diferentes telas
-    """
+class Sidebar(ttk.Frame):
+    """Barra lateral com navegação entre módulos"""
     
-    def __init__(self, parent, app, width=250, **kwargs):
-        """
-        Inicializa a sidebar
+    def __init__(self, parent, router, on_select: Callable, colors: dict):
+        super().__init__(parent, style="Sidebar.TFrame")
+        self.router = router
+        self.on_select = on_select
+        self.colors = colors
+        self.buttons = {}
         
-        Args:
-            parent: Widget pai
-            app: Instância da aplicação
-            width: Largura da sidebar
-        """
-        super().__init__(parent, width=width, corner_radius=0, **kwargs)
-        self.app = app
-        
-        # Configurar largura mínima/máxima
-        self.grid_propagate(False)
-        
-        self._setup_ui()
+        self.setup_ui()
+        self.load_modules()
     
-    def _setup_ui(self):
-        """Configura a interface da sidebar"""
-        # Título
-        self.titulo = ctk.CTkLabel(
-            self,
-            text="🌸 Meu Cantinho",
-            font=ctk.CTkFont(size=20, weight="bold"),
-            text_color="#FF6B8A"
+    def setup_ui(self):
+        """Configura a interface do sidebar"""
+        # Logo
+        logo_frame = ttk.Frame(self, style="Sidebar.TFrame")
+        logo_frame.pack(fill=tk.X, pady=20)
+        
+        logo_label = ttk.Label(
+            logo_frame,
+            text="🏠 MeuCantinho",
+            font=("Segoe UI", 16, "bold"),
+            foreground="white",
+            background="#2c3e50"
         )
-        self.titulo.pack(pady=(30, 20))
+        logo_label.pack(pady=10)
         
-        # Separador
-        separador = ctk.CTkFrame(self, height=2, fg_color="#3D3D3D")
-        separador.pack(fill="x", padx=15, pady=10)
+        ttk.Separator(self, orient="horizontal").pack(fill=tk.X, padx=10, pady=10)
         
-        # Menu
-        self.menu_items = {}
-        self._criar_menu()
+        # Scrollable frame para botões
+        self.canvas = tk.Canvas(self, bg="#2c3e50", highlightthickness=0)
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas, style="Sidebar.TFrame")
         
-        # Versão
-        self.version_label = ctk.CTkLabel(
-            self,
-            text="Versão 1.0.0",
-            font=ctk.CTkFont(size=10),
-            text_color="#666666"
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         )
-        self.version_label.pack(side="bottom", pady=10)
-    
-    def _criar_menu(self):
-        """Cria os itens do menu"""
-        itens = [
-            ("🏠", "Início", "main"),
-            ("📅", "Calendário", "calendar"),
-            ("💭", "Anotações", "notes"),
-            ("💖", "Diário", "daily"),
-            ("💰", "Finanças", "finance"),
-            ("⚙️", "Configurações", "settings")
-        ]
         
-        for icon, text, route in itens:
-            btn = ctk.CTkButton(
-                self,
-                text=f"{icon}  {text}",
-                font=ctk.CTkFont(size=14),
-                fg_color="transparent",
-                hover_color="#3D3D3D",
-                anchor="w",
-                height=45,
-                corner_radius=10,
-                command=lambda r=route: self._navegar(r)
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+        
+        self.canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Frame dos botões
+        self.buttons_frame = ttk.Frame(self.scrollable_frame, style="Sidebar.TFrame")
+        self.buttons_frame.pack(fill=tk.X, padx=5, pady=10)
+    
+    def load_modules(self):
+        """Carrega os botões para cada módulo"""
+        modules = self.router.get_modules_list()
+        
+        for module in modules:
+            self.add_module_button(
+                module["id"],
+                f"{module['icon']} {module['name']}",
+                module["color"]
             )
-            btn.pack(fill="x", padx=15, pady=5)
-            self.menu_items[route] = btn
         
-        # Separador antes do botão sair
-        separador = ctk.CTkFrame(self, height=2, fg_color="#3D3D3D")
-        separador.pack(fill="x", padx=15, pady=20)
+        # Espaçador
+        ttk.Frame(self.buttons_frame, height=20, style="Sidebar.TFrame").pack()
         
-        # Botão sair
-        self.sair_btn = ctk.CTkButton(
-            self,
-            text="🚪  Sair",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            fg_color="#8B3A3A",
-            hover_color="#B04D4D",
-            height=45,
-            corner_radius=10,
-            command=self.app.fechar
+        # Botão de sair
+        self.add_exit_button()
+    
+    def add_module_button(self, module_id: str, label: str, color: str):
+        """Adiciona um botão de módulo"""
+        # Frame para o botão
+        btn_frame = ttk.Frame(self.buttons_frame, style="Sidebar.TFrame")
+        btn_frame.pack(fill=tk.X, pady=2)
+        
+        # Botão estilizado
+        btn = tk.Button(
+            btn_frame,
+            text=label,
+            font=("Segoe UI", 11),
+            bg="#34495e",
+            fg="white",
+            activebackground="#3d566e",
+            activeforeground="white",
+            relief="flat",
+            anchor="w",
+            padx=15,
+            pady=10,
+            cursor="hand2",
+            command=lambda m=module_id: self.on_select(m)
         )
-        self.sair_btn.pack(fill="x", padx=15, pady=10)
+        btn.pack(fill=tk.X)
+        
+        # Efeito hover
+        def on_enter(e):
+            btn.config(bg="#3d566e")
+        
+        def on_leave(e):
+            if self.router.get_current_module() != module_id:
+                btn.config(bg="#34495e")
+        
+        btn.bind("<Enter>", on_enter)
+        btn.bind("<Leave>", on_leave)
+        
+        self.buttons[module_id] = btn
+        
+        # Barra de indicador
+        indicator = tk.Frame(
+            btn_frame,
+            width=3,
+            bg=color
+        )
+        indicator.place(x=0, rely=0, relheight=1)
     
-    def _navegar(self, route):
-        """Navega para a rota especificada"""
-        self.app.router.navegar(route)
-        self._destacar_item(route)
+    def add_exit_button(self):
+        """Adiciona botão de sair"""
+        btn_frame = ttk.Frame(self.buttons_frame, style="Sidebar.TFrame")
+        btn_frame.pack(fill=tk.X, pady=2)
+        
+        exit_btn = tk.Button(
+            btn_frame,
+            text="🚪 Sair",
+            font=("Segoe UI", 11),
+            bg="#c0392b",
+            fg="white",
+            activebackground="#e74c3c",
+            activeforeground="white",
+            relief="flat",
+            anchor="w",
+            padx=15,
+            pady=10,
+            cursor="hand2",
+            command=self.exit_app
+        )
+        exit_btn.pack(fill=tk.X)
     
-    def _destacar_item(self, route_ativo):
-        """Destaca o item do menu ativo"""
-        for route, btn in self.menu_items.items():
-            if route == route_ativo:
-                btn.configure(fg_color="#3D3D3D")
+    def exit_app(self):
+        """Sai do aplicativo"""
+        if tk.messagebox.askyesno("Sair", "Deseja realmente sair do MeuCantinho?"):
+            self.winfo_toplevel().quit()
+    
+    def highlight_module(self, module_id: str):
+        """Destaca o módulo ativo"""
+        for mid, btn in self.buttons.items():
+            if mid == module_id:
+                btn.config(bg="#3d566e")
             else:
-                btn.configure(fg_color="transparent")
-    
-    def set_ativo(self, route):
-        """Define qual item do menu está ativo"""
-        self._destacar_item(route)
-    
-    def collapse(self):
-        """Recolhe a sidebar (para uso futuro)"""
-        # Implementar animação de colapso se necessário
-        pass
-    
-    def expand(self):
-        """Expande a sidebar (para uso futuro)"""
-        pass
+                btn.config(bg="#34495e")

@@ -17,11 +17,19 @@ MeuCantinho/
 │   │       └── sidebar.py
 │   ├── modules/
 │   │   ├── __init__.py
-│   │   ├── calendar/
-│   │   │   ├── __init__.py
-│   │   │   ├── model.py
-│   │   │   ├── controller.py
-│   │   │   └── view.py
+            calendar/
+            ├── model/
+            │   ├── event.py
+            │   └── storage.py
+            │
+            ├── controller/
+            │   └── calendar_controller.py
+            │
+            ├── view/
+            │   ├── calendar_view.py      # tela principal (estrutura + layout)
+            │   ├── calendar_views.py     # mes / semana / lista
+            │   ├── event_ui.py           # cards + célula de dia
+            │   └── event_dialog.py       # criar/editar evento
 │   │   ├── notes/
 │   │   │   ├── __init__.py
 │   │   │   ├── model.py

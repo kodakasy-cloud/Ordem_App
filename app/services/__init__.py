@@ -1,6 +1,7 @@
 """
-Services - Serviços da aplicação
+Services - Serviços do aplicativo
 """
-from app.services.storage import StorageService
+
+from .storage import StorageService
 
 __all__ = ['StorageService']

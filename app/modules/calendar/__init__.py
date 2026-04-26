@@ -1,8 +1,10 @@
 """
 Módulo de Calendário
+Gerencia eventos, compromissos e lembretes
 """
-from app.modules.calendar.controller.controller import CalendarController
-from app.modules.calendar.model import CalendarModel
-from app.modules.calendar.view import CalendarView
 
-__all__ = ['CalendarController', 'CalendarModel', 'CalendarView']
+from .controller.calendar_controller import CalendarController
+from .view.calendar_view import CalendarView
+from .model.event import Event
+
+__all__ = ['CalendarController', 'CalendarView', 'Event']

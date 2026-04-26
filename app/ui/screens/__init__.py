@@ -1,7 +1,8 @@
 """
-Screens - Telas principais da aplicação
+Screens - Telas principais do aplicativo
 """
-from app.ui.screens.main_screen import MainScreen
-from app.ui.screens.loading_screen import LoadingScreen
+
+from .main_screen import MainScreen
+from .loading_screen import LoadingScreen
 
 __all__ = ['MainScreen', 'LoadingScreen']

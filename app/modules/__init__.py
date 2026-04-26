@@ -1,16 +1,5 @@
 """
-Modules - Módulos funcionais da aplicação
+Modules - Módulos do aplicativo
 """
-from app.modules.calendar.controller.controller import CalendarController
-from app.modules.notes.controller import NotesController
-from app.modules.daily.controller import DailyController
-from app.modules.finance.controller import FinanceController
-from app.modules.setting.controller import SettingController
 
-__all__ = [
-    'CalendarController',
-    'NotesController',
-    'DailyController',
-    'FinanceController',
-    'SettingController'
-]
+# Cada módulo será importado separadamente quando necessário
